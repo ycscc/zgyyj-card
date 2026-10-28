@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>小卡抽卡机</title>
+<title>中国音乐剧小卡抽卡机</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 /* 卡背淡出 */
@@ -104,7 +104,7 @@
   position: relative;
 }
 .card-name {
-  margin-top: 248px;
+  margin-top: 78px;
   text-align: center;
   font-size: 0.875rem;
   opacity: 0;
@@ -131,7 +131,7 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4 md:p-6">
 <div class="max-w-4xl mx-auto">
-  <h1 class="text-2xl md:text-3xl font-bold text-center mb-6">小卡抽卡系统</h1>
+  <h1 class="text-2xl md:text-3xl font-bold text-center mb-6">小卡抽卡模拟器</h1>
 
   <!-- 导航标签 -->
   <div class="flex flex-wrap gap-2 mb-6 border-b border-slate-700 pb-2">
@@ -145,7 +145,7 @@
   <div id="draw" class="tab-content active">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">抽卡</h2>
-      <p class="text-slate-400 mb-4">卡背淡出后展示正面小卡，名称显示在卡片下方</p>
+      <p class="text-slate-400 mb-4">请抽取你的小卡</p>
       <div class="flex gap-3 mb-4">
         <button id="drawBtn" class="px-6 py-2 bg-pink-500 rounded-lg hover:bg-pink-600">单抽一张</button>
         <button id="draw5Btn" class="px-6 py-2 bg-rose-600 rounded-lg hover:bg-rose-700">5连抽</button>
@@ -160,7 +160,7 @@
   <div id="tear" class="tab-content">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">抽撕拉片</h2>
-      <p class="text-slate-400 mb-4">撕拉片卡背从左上到右下淡出，名称显示在卡片下方</p>
+      <p class="text-slate-400 mb-4">请抽取你的撕拉片</p>
       <button id="tearBtn" class="px-6 py-2 bg-amber-500 rounded-lg hover:bg-amber-600">抽取一张撕拉片</button>
       <div id="tearResult" class="tear-result-box">
         <div class="text-slate-500 text-sm self-center">点击按钮开始抽取撕拉片</div>
