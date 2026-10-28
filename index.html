@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>中国音乐剧小卡抽卡机</title>
+<title>中国音乐剧小卡抽卡模拟器</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 /* 卡背淡出动画 */
@@ -24,7 +24,7 @@
   60% {
     opacity: 1;
     transform: scale(1.05);
-  }
+  }	
   100% {
     opacity: 1;
     transform: scale(1);
@@ -131,35 +131,65 @@
 
 /* 图鉴分组样式 */
 .series-group{
-  margin-bottom:20px;
+  margin-bottom:24px;
+  width:100%;
 }
 .series-title{
   color:#f472b6;
   font-weight:bold;
-  margin:0 0 8px;
+  margin:0 0 6px;
   font-size:1rem;
 }
 .series-title-tear{
   color:#fbbf24;
 }
+/* 进度条容器 */
+.progress-wrap{
+  width:100%;
+  height:10px;
+  background-color:#334155;
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:10px;
+}
+.progress-bar{
+  height:100%;
+  background-color:#f472b6;
+  transition: width 0.3s ease;
+}
+.progress-text{
+  font-size:12px;
+  color:#cbd5e1;
+  margin-bottom:8px;
+}
 .series-card-grid{
   display:grid;
   grid-template-columns: repeat(5, minmax(0,1fr));
   gap:12px;
+  width:100%;
 }
+/* 小于768px手机：一行3张 */
 @media (max-width:768px){
   .series-card-grid{
     grid-template-columns: repeat(3, minmax(0,1fr));
   }
 }
-/* 图鉴卡片容器 + 半黑遮罩 */
+/* 图鉴卡片容器 + 65%黑色遮罩 */
 .book-card-wrap{
   position:relative;
+  width:100%;
 }
-.mask-50{
+.book-card-wrap img{
+  width:100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius:0.5rem;
+  display:block;
+}
+.mask-65{
   position:absolute;
   inset:0;
-  background-color:rgba(0,0,0,0.5);
+  background-color:rgba(0,0,0,0.65);
   border-radius:0.5rem;
 }
 </style>
@@ -174,6 +204,7 @@
     <button class="tab-btn px-4 py-2 rounded bg-slate-700 hover:bg-slate-600" data-tab="tear">抽撕拉片</button>
     <button class="tab-btn px-4 py-2 rounded bg-slate-700 hover:bg-slate-600" data-tab="book">图鉴</button>
     <button class="tab-btn px-4 py-2 rounded bg-slate-700 hover:bg-slate-600" data-tab="log">记录</button>
+    <button id="resetSaveBtn" class="px-4 py-2 rounded bg-red-700 hover:bg-red-600">重置存档</button>
   </div>
 
   <!-- 板块1：抽卡 -->
@@ -210,7 +241,7 @@
   <div id="book" class="tab-content">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">图鉴</h2>
-      <p class="text-slate-400 mb-4">已抽到正常显示，未抽到为正面卡面叠加50%黑色遮罩</p>
+      <p class="text-slate-400 mb-4">已抽到正常显示，未抽到为正面卡面叠加65%黑色遮罩</p>
       <div class="mb-6">
         <h3 class="text-lg text-pink-400 mb-3">普通小卡</h3>
         <div id="cardBook"></div>
@@ -248,9 +279,36 @@ const polaroidList = [
   {id:"p3", name:"撕拉C", series:"暮色系列", backUrl:"https://picsum.photos/id/31/200/300", img:"https://picsum.photos/id/113/200/300"},
 ];
 
+// 存档读写函数
+function saveData(){
+  localStorage.setItem("cardSave", JSON.stringify({
+    gotCards: Array.from(gotCards),
+    gotTears: Array.from(gotTears),
+    logArr: logArr
+  }));
+}
+function loadData(){
+  const raw = localStorage.getItem("cardSave");
+  if(!raw) return;
+  const data = JSON.parse(raw);
+  gotCards = new Set(data.gotCards || []);
+  gotTears = new Set(data.gotTears || []);
+  logArr = data.logArr || [];
+}
+function resetAllSave(){
+  localStorage.removeItem("cardSave");
+  gotCards.clear();
+  gotTears.clear();
+  logArr = [];
+  renderBook();
+  renderLog();
+  alert("存档已全部重置！");
+}
+
 let gotCards = new Set();
 let gotTears = new Set();
 let logArr = [];
+loadData(); // 页面加载读取存档
 
 // 标签切换
 const tabBtns = document.querySelectorAll(".tab-btn");
@@ -266,6 +324,7 @@ tabBtns.forEach(btn=>{
     if(target==="log") renderLog();
   }
 })
+document.getElementById("resetSaveBtn").onclick = resetAllSave;
 
 // 抽卡工具
 function drawOneCard(){
@@ -283,6 +342,7 @@ drawBtn.onclick = ()=>{
   const rand = drawOneCard();
   gotCards.add(rand.id);
   addLog("普通抽卡【单抽】", `[${rand.series}] ${rand.name}`);
+  saveData();
 
   drawResult.innerHTML = `
     <div class="card-slot">
@@ -323,6 +383,7 @@ draw5Btn.onclick = ()=>{
     gotCards.add(c.id);
   }
   addLog("普通抽卡【5连抽】", resultCards.map(x=>`[${x.series}]${x.name}`).join("、"));
+  saveData();
   drawResult.innerHTML = "";
   resultCards.forEach((card, idx) => {
     const slot = document.createElement("div");
@@ -362,6 +423,7 @@ tearBtn.onclick = ()=>{
   const rand = drawOneTear();
   gotTears.add(rand.id);
   addLog("撕拉片抽卡【单抽】", `[${rand.series}] ${rand.name}`);
+  saveData();
   tearResult.innerHTML = `
     <div class="tear-slot">
       <div class="tear-img-wrap">
@@ -399,6 +461,7 @@ tear5Btn.onclick = ()=>{
     gotTears.add(t.id);
   }
   addLog("撕拉片抽卡【5连抽】", resultTears.map(x=>`[${x.series}]${x.name}`).join("、"));
+  saveData();
   tearResult.innerHTML = "";
   resultTears.forEach((tear, idx) => {
     const slot = document.createElement("div");
@@ -431,7 +494,7 @@ tear5Btn.onclick = ()=>{
   });
 }
 
-// 图鉴渲染【重点修改这里】
+// 图鉴渲染
 function renderBook(){
   const cardBookDom = document.getElementById("cardBook");
   cardBookDom.innerHTML = "";
@@ -441,16 +504,24 @@ function renderBook(){
     cardGroup[c.series].push(c);
   })
   for(const sName in cardGroup){
-    cardBookDom.innerHTML += `<div class="series-group">
-      <h4 class="series-title">${sName}</h4>
-      <div class="series-card-grid">`;
-    cardGroup[sName].forEach(card=>{
+    const list = cardGroup[sName];
+    const total = list.length;
+    const collected = list.filter(item=>gotCards.has(item.id)).length;
+    const percent = (collected / total) * 100;
+    cardBookDom.innerHTML += `
+      <div class="series-group">
+        <h4 class="series-title">${sName}</h4>
+        <div class="progress-text">收集：${collected}/${total}</div>
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:${percent}%"></div>
+        </div>
+        <div class="series-card-grid">`;
+    list.forEach(card=>{
       const have = gotCards.has(card.id);
-      // 无论抽没抽到，都用正面图
-      const htmlMask = have ? "" : `<div class="mask-50"></div>`;
+      const htmlMask = have ? "" : `<div class="mask-65"></div>`;
       cardBookDom.innerHTML += `
         <div class="book-card-wrap text-center">
-          <img src="${card.img}" class="w-full rounded">
+          <img src="${card.img}">
           ${htmlMask}
           <p class="text-xs mt-1">${card.name}</p>
         </div>
@@ -467,15 +538,24 @@ function renderBook(){
     tearGroup[t.series].push(t);
   })
   for(const sName in tearGroup){
-    tearBookDom.innerHTML += `<div class="series-group">
-      <h4 class="series-title series-title-tear">${sName}</h4>
-      <div class="series-card-grid">`;
-    tearGroup[sName].forEach(card=>{
+    const list = tearGroup[sName];
+    const total = list.length;
+    const collected = list.filter(item=>gotTears.has(item.id)).length;
+    const percent = (collected / total) * 100;
+    tearBookDom.innerHTML += `
+      <div class="series-group">
+        <h4 class="series-title series-title-tear">${sName}</h4>
+        <div class="progress-text">收集：${collected}/${total}</div>
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:${percent}%; background-color:#fbbf24;"></div>
+        </div>
+        <div class="series-card-grid">`;
+    list.forEach(card=>{
       const have = gotTears.has(card.id);
-      const htmlMask = have ? "" : `<div class="mask-50"></div>`;
+      const htmlMask = have ? "" : `<div class="mask-65"></div>`;
       tearBookDom.innerHTML += `
         <div class="book-card-wrap text-center">
-          <img src="${card.img}" class="w-full rounded">
+          <img src="${card.img}">
           ${htmlMask}
           <p class="text-xs mt-1">${card.name}</p>
         </div>
@@ -509,8 +589,12 @@ function renderLog(){
 }
 document.getElementById("clearLog").onclick = ()=>{
   logArr = [];
+  saveData();
   renderLog();
 }
+
+// 初始渲染图鉴
+renderBook();
 </script>
 </body>
 </html>
