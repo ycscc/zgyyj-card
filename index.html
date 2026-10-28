@@ -43,15 +43,13 @@
   animation: nameFade 0.35s ease forwards;
 }
 
-/* 撕拉片卡背：左上到右下淡出 */
+/* 撕拉片卡背：左上到右下扫开消失 */
 @keyframes tearBackFade {
   0% {
-    opacity: 1;
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
   100% {
-    opacity: 0;
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
   }
 }
 .tear-back-fade {
@@ -88,7 +86,9 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 10px;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 8px 0;
 }
 
 /* 卡片容器：图片在上，名字在下方独立区域 */
@@ -120,6 +120,7 @@
   width: 192px;
   height: 288px;
   position: relative;
+  overflow:hidden;
 }
 .tear-name {
   margin-top: 8px;
@@ -156,12 +157,15 @@
     </div>
   </div>
 
-  <!-- 板块2：抽撕拉片 -->
+  <!-- 板块2：抽撕拉片（新增5连抽按钮） -->
   <div id="tear" class="tab-content">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">抽撕拉片</h2>
       <p class="text-slate-400 mb-4">请抽取你的撕拉片</p>
-      <button id="tearBtn" class="px-6 py-2 bg-amber-500 rounded-lg hover:bg-amber-600">抽取一张撕拉片</button>
+      <div class="flex gap-3 mb-4">
+        <button id="tearBtn" class="px-6 py-2 bg-amber-500 rounded-lg hover:bg-amber-600">单抽一张</button>
+        <button id="tear5Btn" class="px-6 py-2 bg-orange-600 rounded-lg hover:bg-orange-700">5连抽</button>
+      </div>
       <div id="tearResult" class="tear-result-box">
         <div class="text-slate-500 text-sm self-center">点击按钮开始抽取撕拉片</div>
       </div>
@@ -233,6 +237,9 @@ tabBtns.forEach(btn=>{
 // 工具函数
 function drawOneCard(){
   return cardList[Math.floor(Math.random()*cardList.length)];
+}
+function drawOneTear(){
+  return polaroidList[Math.floor(Math.random()*polaroidList.length)];
 }
 
 // 普通抽卡：单抽
@@ -325,14 +332,14 @@ draw5Btn.onclick = ()=>{
   });
 }
 
-// 撕拉片抽卡
+// 撕拉片：单抽
 const tearBtn = document.getElementById("tearBtn");
 const tearResult = document.getElementById("tearResult");
 
 tearBtn.onclick = ()=>{
-  const rand = polaroidList[Math.floor(Math.random()*polaroidList.length)];
+  const rand = drawOneTear();
   gotTears.add(rand.id);
-  addLog("撕拉片抽卡", rand.name);
+  addLog("撕拉片抽卡【单抽】", rand.name);
 
   tearResult.innerHTML = `
     <div class="tear-slot">
@@ -363,6 +370,55 @@ tearBtn.onclick = ()=>{
   setTimeout(() => {
     name.classList.add("name-fade");
   }, 1200);
+}
+
+// 撕拉片：5连抽（新增）
+const tear5Btn = document.getElementById("tear5Btn");
+tear5Btn.onclick = ()=>{
+  const resultTears = [];
+  for(let i = 0; i < 5; i++){
+    const t = drawOneTear();
+    resultTears.push(t);
+    gotTears.add(t.id);
+  }
+  addLog("撕拉片抽卡【5连抽】", resultTears.map(x=>x.name).join("、"));
+
+  tearResult.innerHTML = "";
+
+  resultTears.forEach((tear, idx) => {
+    const slot = document.createElement("div");
+    slot.className = "tear-slot";
+    slot.innerHTML = `
+      <div class="tear-img-wrap">
+        <div class="tear-back absolute inset-0">
+          <img src="${cardBackUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
+        </div>
+        <div class="tear-front absolute inset-0 flex flex-col items-center justify-center opacity-0">
+          <img src="${tear.img}" class="w-full h-full object-cover rounded-lg shadow-lg">
+        </div>
+      </div>
+      <p class="tear-name">${tear.name}</p>
+    `;
+    tearResult.appendChild(slot);
+
+    const back = slot.querySelector(".tear-back");
+    const front = slot.querySelector(".tear-front");
+    const name = slot.querySelector(".tear-name");
+
+    const delay = idx * 180;
+
+    setTimeout(() => back.classList.add("tear-back-fade"), 100 + delay);
+
+    setTimeout(() => {
+      back.style.display = "none";
+      front.classList.remove("opacity-0");
+      front.classList.add("tear-front-in");
+    }, 800 + delay);
+
+    setTimeout(() => {
+      name.classList.add("name-fade");
+    }, 1200 + delay);
+  });
 }
 
 // 图鉴
