@@ -6,79 +6,102 @@
 <title>小卡抽卡机</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-/* 普通抽卡：卡背逆时针旋转消失动画 */
-@keyframes rotateOut {
+/* 卡背淡出 */
+@keyframes backFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.back-fade-out {
+  animation: backFadeOut 0.5s ease forwards;
+}
+
+/* 正面小卡弹出 */
+@keyframes cardPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.card-pop {
+  animation: cardPop 0.45s ease forwards;
+}
+
+/* 名称淡入 */
+@keyframes nameFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.name-fade {
+  animation: nameFade 0.35s ease forwards;
+}
+
+/* 撕拉片卡背：左上到右下淡出 */
+@keyframes tearBackFade {
   0% {
     opacity: 1;
-    transform: rotate(0deg) scale(1);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
   100% {
     opacity: 0;
-    transform: rotate(-135deg) scale(0.6);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
 }
-.rotate-out {
-  animation: rotateOut 0.7s ease forwards;
+.tear-back-fade {
+  animation: tearBackFade 0.8s ease forwards;
 }
 
-/* 正面淡入 */
-@keyframes fadeIn {
-  from { opacity:0; transform: scale(0.9); }
-  to { opacity:1; transform: scale(1); }
+/* 撕拉片正面淡入 */
+@keyframes tearFrontIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-.fade-in {
-  animation: fadeIn 0.5s ease forwards;
-}
-.fade-in-delay-1 { animation-delay: 0.15s; }
-.fade-in-delay-2 { animation-delay: 0.3s; }
-.fade-in-delay-3 { animation-delay: 0.45s; }
-.fade-in-delay-4 { animation-delay: 0.6s; }
-
-/* 名字延迟淡入 */
-@keyframes nameFade {
-  from { opacity:0; }
-  to { opacity:1; }
-}
-.name-fade {
-  animation: nameFade 0.4s ease forwards;
-  animation-delay: 0.6s;
-  opacity:0;
-}
-
-/* 撕拉动画：左上到右下撕开 */
-.tear-wrap {
-  position: relative;
-  overflow: hidden;
-}
-.tear-back {
-  position: absolute;
-  top:0; left:0;
-  width:100%; height:100%;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-  transition: clip-path 1s ease-in-out;
-  z-index: 2;
-}
-.tear-back.tear-anim {
-  clip-path: polygon(0 0, 0 0, 0 0, 0 0);
-}
-.tear-front {
-  position: relative;
-  z-index:1;
-  opacity:0;
-}
-.tear-front.show-front {
-  animation: fadeIn 0.5s ease forwards;
-  animation-delay: 1s;
-}
-.tear-name {
-  opacity:0;
-  animation: nameFade 0.4s ease forwards;
-  animation-delay: 1.5s;
+.tear-front-in {
+  animation: tearFrontIn 0.4s ease forwards;
+  animation-delay: 0.8s;
 }
 
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 .card-item { transition: all 0.3s; }
+
+/* 固定结果区尺寸，避免遮挡按钮 */
+.draw-result-box {
+  min-height: 340px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.tear-result-box {
+  min-height: 360px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-slot {
+  width: 160px;
+  height: 240px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tear-slot {
+  width: 192px;
+  height: 288px;
+  position: relative;
+}
 </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4 md:p-6">
@@ -97,12 +120,13 @@
   <div id="draw" class="tab-content active">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">抽卡</h2>
-      <p class="text-slate-400 mb-4">卡池内卡片等概率抽取，抽取后自动记入图鉴</p>
+      <p class="text-slate-400 mb-4">卡背淡出后展示正面小卡，抽取后自动记入图鉴</p>
       <div class="flex gap-3 mb-4">
         <button id="drawBtn" class="px-6 py-2 bg-pink-500 rounded-lg hover:bg-pink-600">单抽一张</button>
         <button id="draw5Btn" class="px-6 py-2 bg-rose-600 rounded-lg hover:bg-rose-700">5连抽</button>
       </div>
-      <div id="drawResult" class="mt-6 flex justify-center flex-wrap gap-3">
+      <div id="drawResult" class="draw-result-box">
+        <div class="text-slate-500 text-sm self-center">点击按钮开始抽卡</div>
       </div>
     </div>
   </div>
@@ -111,9 +135,10 @@
   <div id="tear" class="tab-content">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">抽撕拉片</h2>
-      <p class="text-slate-400 mb-4">撕拉片池等概率抽取，卡背从左上向右下撕开消失</p>
+      <p class="text-slate-400 mb-4">撕拉片卡背从左上到右下淡出后展示正面</p>
       <button id="tearBtn" class="px-6 py-2 bg-amber-500 rounded-lg hover:bg-amber-600">抽取一张撕拉片</button>
-      <div id="tearResult" class="mt-6 flex justify-center">
+      <div id="tearResult" class="tear-result-box">
+        <div class="text-slate-500 text-sm">点击按钮开始抽取撕拉片</div>
       </div>
     </div>
   </div>
@@ -148,24 +173,21 @@
 
 <script>
 // ========== 配置区：在这里替换你的图片 ==========
-const cardBackUrl = "https://i.ibb.co/TqWp1xn5/card-back.jpg"; // 卡背图
-// 普通小卡卡池
+const cardBackUrl = "https://picsum.photos/id/20/200/300";
 const cardList = [
   {id:"c1", name:"小卡A", img:"https://picsum.photos/id/101/200/300"},
   {id:"c2", name:"小卡B", img:"https://picsum.photos/id/102/200/300"},
   {id:"c3", name:"小卡C", img:"https://picsum.photos/id/103/200/300"},
   {id:"c4", name:"小卡D", img:"https://picsum.photos/id/104/200/300"},
 ];
-// 撕拉片卡池
 const polaroidList = [
-  {id:"p1", name:"叶宇锋", img:"https://i.ibb.co/Dgpy21PB/Other1.jpg"},
+  {id:"p1", name:"撕拉A", img:"https://picsum.photos/id/111/200/300"},
   {id:"p2", name:"撕拉B", img:"https://picsum.photos/id/112/200/300"},
   {id:"p3", name:"撕拉C", img:"https://picsum.photos/id/113/200/300"},
 ];
 
-// 数据
-let gotCards = new Set(); // 抽到的普通卡id
-let gotTears = new Set(); // 抽到的撕拉片id
+let gotCards = new Set();
+let gotTears = new Set();
 let logArr = [];
 
 // 标签切换
@@ -183,114 +205,139 @@ tabBtns.forEach(btn=>{
   }
 })
 
-// 抽卡工具函数
-const drawBtn = document.getElementById("drawBtn");
-const draw5Btn = document.getElementById("draw5Btn");
-const drawResult = document.getElementById("drawResult");
-
+// 工具函数
 function drawOneCard(){
   return cardList[Math.floor(Math.random()*cardList.length)];
 }
 
-// 单抽
+// 普通抽卡：单抽
+const drawBtn = document.getElementById("drawBtn");
+const drawResult = document.getElementById("drawResult");
+
 drawBtn.onclick = ()=>{
   const rand = drawOneCard();
   gotCards.add(rand.id);
   addLog("普通抽卡【单抽】", rand.name);
+
   drawResult.innerHTML = `
-    <div class="relative w-40">
-      <div class="card-back">
-        <img src="${cardBackUrl}" class="w-full rounded-lg shadow-lg">
+    <div class="card-slot">
+      <div class="card-back absolute inset-0">
+        <img src="${cardBackUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
       </div>
-      <div class="card-front absolute inset-0 hidden flex-col items-center justify-center">
-        <img src="${rand.img}" class="w-full rounded-lg shadow-lg">
-        <p class="text-center mt-2 name-fade">${rand.name}</p>
+      <div class="card-front absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none">
+        <img src="${rand.img}" class="w-full h-full object-cover rounded-lg shadow-lg">
       </div>
+      <p class="card-name absolute left-0 right-0 text-center text-sm mt-1 opacity-0">${rand.name}</p>
     </div>
-  `
-  const backDom = drawResult.querySelector(".card-back");
-  const frontDom = drawResult.querySelector(".card-front");
-  setTimeout(()=>{
-    backDom.classList.add("rotate-out");
-  }, 100);
-  setTimeout(()=>{
-    backDom.style.display = "none";
-    frontDom.classList.remove("hidden");
-    frontDom.classList.add("flex", "fade-in");
-  }, 800);
+  `;
+
+  const back = drawResult.querySelector(".card-back");
+  const front = drawResult.querySelector(".card-front");
+  const name = drawResult.querySelector(".card-name");
+
+  setTimeout(() => back.classList.add("back-fade-out"), 100);
+
+  setTimeout(() => {
+    back.style.display = "none";
+    front.classList.remove("opacity-0", "pointer-events-none");
+    front.classList.add("card-pop");
+  }, 600);
+
+  setTimeout(() => {
+    name.classList.remove("opacity-0");
+    name.classList.add("name-fade");
+  }, 1050);
 }
 
-// 5连抽
+// 普通抽卡：5连抽
+const draw5Btn = document.getElementById("draw5Btn");
+
 draw5Btn.onclick = ()=>{
-  drawResult.innerHTML = "";
   const resultCards = [];
-  for(let i=0;i<5;i++){
+  for(let i = 0; i < 5; i++){
     const c = drawOneCard();
     resultCards.push(c);
     gotCards.add(c.id);
   }
   addLog("普通抽卡【5连抽】", resultCards.map(x=>x.name).join("、"));
 
-  let html = "";
-  resultCards.forEach((card, idx)=>{
-    html += `
-    <div class="relative w-40">
-      <div class="card-back">
-        <img src="${cardBackUrl}" class="w-full rounded-lg shadow-lg">
-      </div>
-      <div class="card-front absolute inset-0 hidden flex-col items-center justify-center">
-        <img src="${card.img}" class="w-full rounded-lg shadow-lg">
-        <p class="text-center mt-2 name-fade">${card.name}</p>
-      </div>
-    </div>
-    `
-  })
-  drawResult.innerHTML = html;
+  drawResult.innerHTML = "";
 
-  const allBack = drawResult.querySelectorAll(".card-back");
-  const allFront = drawResult.querySelectorAll(".card-front");
-  allBack.forEach((back, idx)=>{
-    const delay = idx * 200;
-    setTimeout(()=>{
-      back.classList.add("rotate-out");
-    }, delay + 100);
-    setTimeout(()=>{
+  resultCards.forEach((card, idx) => {
+    const slot = document.createElement("div");
+    slot.className = "card-slot";
+    slot.innerHTML = `
+      <div class="card-back absolute inset-0">
+        <img src="${cardBackUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
+      </div>
+      <div class="card-front absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none">
+        <img src="${card.img}" class="w-full h-full object-cover rounded-lg shadow-lg">
+      </div>
+      <p class="card-name absolute left-0 right-0 text-center text-sm mt-1 opacity-0">${card.name}</p>
+    `;
+    drawResult.appendChild(slot);
+
+    const back = slot.querySelector(".card-back");
+    const front = slot.querySelector(".card-front");
+    const name = slot.querySelector(".card-name");
+
+    const delay = idx * 180;
+
+    setTimeout(() => back.classList.add("back-fade-out"), 100 + delay);
+
+    setTimeout(() => {
       back.style.display = "none";
-      allFront[idx].classList.remove("hidden");
-      allFront[idx].classList.add("flex", "fade-in");
-    }, delay + 800);
-  })
+      front.classList.remove("opacity-0", "pointer-events-none");
+      front.classList.add("card-pop");
+    }, 600 + delay);
+
+    setTimeout(() => {
+      name.classList.remove("opacity-0");
+      name.classList.add("name-fade");
+    }, 1050 + delay);
+  });
 }
 
-// 抽撕拉片
+// 撕拉片抽卡
 const tearBtn = document.getElementById("tearBtn");
 const tearResult = document.getElementById("tearResult");
+
 tearBtn.onclick = ()=>{
   const rand = polaroidList[Math.floor(Math.random()*polaroidList.length)];
   gotTears.add(rand.id);
   addLog("撕拉片抽卡", rand.name);
+
   tearResult.innerHTML = `
-    <div class="tear-wrap w-48 rounded-lg shadow-lg overflow-hidden">
-      <div class="tear-front">
-        <img src="${rand.img}" alt="${rand.name}" class="w-full block">
+    <div class="tear-slot">
+      <div class="tear-back absolute inset-0">
+        <img src="${cardBackUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
       </div>
-      <div class="tear-back">
-        <img src="${cardBackUrl}" alt="卡背" class="w-full block">
+      <div class="tear-front absolute inset-0 flex flex-col items-center justify-center opacity-0">
+        <img src="${rand.img}" class="w-full h-full object-cover rounded-lg shadow-lg">
       </div>
-      <p class="tear-name text-center mt-2">${rand.name}</p>
+      <p class="tear-name absolute left-0 right-0 text-center text-sm mt-1 opacity-0">${rand.name}</p>
     </div>
-  `
-  const backDom = tearResult.querySelector(".tear-back");
-  const frontDom = tearResult.querySelector(".tear-front");
-  setTimeout(()=>{
-    backDom.classList.add("tear-anim");
-  },100);
-  setTimeout(()=>{
-    frontDom.classList.add("show-front");
-  },1000);
+  `;
+
+  const back = tearResult.querySelector(".tear-back");
+  const front = tearResult.querySelector(".tear-front");
+  const name = tearResult.querySelector(".tear-name");
+
+  setTimeout(() => back.classList.add("tear-back-fade"), 100);
+
+  setTimeout(() => {
+    back.style.display = "none";
+    front.classList.remove("opacity-0");
+    front.classList.add("tear-front-in");
+  }, 800);
+
+  setTimeout(() => {
+    name.classList.remove("opacity-0");
+    name.classList.add("name-fade");
+  }, 1200);
 }
 
-// 图鉴渲染
+// 图鉴
 function renderBook(){
   const cardBookDom = document.getElementById("cardBook");
   cardBookDom.innerHTML = "";
@@ -326,8 +373,8 @@ function addLog(type, name){
 }
 function renderLog(){
   const logDom = document.getElementById("logList");
-  if(logArr.length ===0){
-    logDom.innerHTML = `<div class="text-slate-400">暂无记录</div>`
+  if(logArr.length === 0){
+    logDom.innerHTML = `<div class="text-slate-400">暂无记录</div>`;
     return;
   }
   logDom.innerHTML = logArr.map(item=>`
