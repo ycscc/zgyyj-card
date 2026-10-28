@@ -128,6 +128,16 @@
   font-size: 0.875rem;
   opacity: 0;
 }
+
+.series-title{
+  width:100%;
+  color:#f472b6;
+  font-weight:bold;
+  margin:12px 0 4px;
+}
+.series-title-tear{
+  color:#fbbf24;
+}
 </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4 md:p-6">
@@ -157,7 +167,7 @@
     </div>
   </div>
 
-  <!-- 板块2：抽撕拉片（新增5连抽按钮） -->
+  <!-- 板块2：抽撕拉片 -->
   <div id="tear" class="tab-content">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">抽撕拉片</h2>
@@ -172,11 +182,11 @@
     </div>
   </div>
 
-  <!-- 板块3：图鉴 -->
+  <!-- 板块3：图鉴（分系列展示） -->
   <div id="book" class="tab-content">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">图鉴</h2>
-      <p class="text-slate-400 mb-4">已抽到显示正面，未抽到显示卡背</p>
+      <p class="text-slate-400 mb-4">已抽到显示正面，未抽到显示该系列卡背</p>
       <div class="mb-4">
         <h3 class="text-lg text-pink-400">普通小卡</h3>
         <div id="cardBook" class="grid grid-cols-3 md:grid-cols-5 gap-4 mt-2"></div>
@@ -201,18 +211,17 @@
 </div>
 
 <script>
-// ========== 配置区：在这里替换你的图片 ==========
-const cardBackUrl = "https://picsum.photos/id/20/200/300";
+// ========== 配置区：新增 series、backUrl，每个系列独立卡背 ==========
 const cardList = [
-  {id:"c1", name:"小卡A", img:"https://picsum.photos/id/101/200/300"},
-  {id:"c2", name:"小卡B", img:"https://picsum.photos/id/102/200/300"},
-  {id:"c3", name:"小卡C", img:"https://picsum.photos/id/103/200/300"},
-  {id:"c4", name:"小卡D", img:"https://picsum.photos/id/104/200/300"},
+  {id:"c1", name:"小卡A", series:"星梦系列", backUrl:"https://picsum.photos/id/20/200/300", img:"https://picsum.photos/id/101/200/300"},
+  {id:"c2", name:"小卡B", series:"星梦系列", backUrl:"https://picsum.photos/id/20/200/300", img:"https://picsum.photos/id/102/200/300"},
+  {id:"c3", name:"小卡C", series:"回响系列", backUrl:"https://picsum.photos/id/21/200/300", img:"https://picsum.photos/id/103/200/300"},
+  {id:"c4", name:"小卡D", series:"回响系列", backUrl:"https://picsum.photos/id/21/200/300", img:"https://picsum.photos/id/104/200/300"},
 ];
 const polaroidList = [
-  {id:"p1", name:"撕拉A", img:"https://picsum.photos/id/111/200/300"},
-  {id:"p2", name:"撕拉B", img:"https://picsum.photos/id/112/200/300"},
-  {id:"p3", name:"撕拉C", img:"https://picsum.photos/id/113/200/300"},
+  {id:"p1", name:"撕拉A", series:"晨光系列", backUrl:"https://picsum.photos/id/30/200/300", img:"https://picsum.photos/id/111/200/300"},
+  {id:"p2", name:"撕拉B", series:"晨光系列", backUrl:"https://picsum.photos/id/30/200/300", img:"https://picsum.photos/id/112/200/300"},
+  {id:"p3", name:"撕拉C", series:"暮色系列", backUrl:"https://picsum.photos/id/31/200/300", img:"https://picsum.photos/id/113/200/300"},
 ];
 
 let gotCards = new Set();
@@ -249,13 +258,13 @@ const drawResult = document.getElementById("drawResult");
 drawBtn.onclick = ()=>{
   const rand = drawOneCard();
   gotCards.add(rand.id);
-  addLog("普通抽卡【单抽】", rand.name);
+  addLog("普通抽卡【单抽】", `[${rand.series}] ${rand.name}`);
 
   drawResult.innerHTML = `
     <div class="card-slot">
       <div class="card-img-wrap">
         <div class="card-back absolute inset-0">
-          <img src="${cardBackUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
+          <img src="${rand.backUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
         </div>
         <div class="card-front absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none">
           <img src="${rand.img}" class="w-full h-full object-cover rounded-lg shadow-lg">
@@ -292,7 +301,7 @@ draw5Btn.onclick = ()=>{
     resultCards.push(c);
     gotCards.add(c.id);
   }
-  addLog("普通抽卡【5连抽】", resultCards.map(x=>x.name).join("、"));
+  addLog("普通抽卡【5连抽】", resultCards.map(x=>`[${x.series}]${x.name}`).join("、"));
 
   drawResult.innerHTML = "";
 
@@ -302,7 +311,7 @@ draw5Btn.onclick = ()=>{
     slot.innerHTML = `
       <div class="card-img-wrap">
         <div class="card-back absolute inset-0">
-          <img src="${cardBackUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
+          <img src="${card.backUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
         </div>
         <div class="card-front absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none">
           <img src="${card.img}" class="w-full h-full object-cover rounded-lg shadow-lg">
@@ -339,13 +348,13 @@ const tearResult = document.getElementById("tearResult");
 tearBtn.onclick = ()=>{
   const rand = drawOneTear();
   gotTears.add(rand.id);
-  addLog("撕拉片抽卡【单抽】", rand.name);
+  addLog("撕拉片抽卡【单抽】", `[${rand.series}] ${rand.name}`);
 
   tearResult.innerHTML = `
     <div class="tear-slot">
       <div class="tear-img-wrap">
         <div class="tear-back absolute inset-0">
-          <img src="${cardBackUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
+          <img src="${rand.backUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
         </div>
         <div class="tear-front absolute inset-0 flex flex-col items-center justify-center opacity-0">
           <img src="${rand.img}" class="w-full h-full object-cover rounded-lg shadow-lg">
@@ -372,7 +381,7 @@ tearBtn.onclick = ()=>{
   }, 1200);
 }
 
-// 撕拉片：5连抽（新增）
+// 撕拉片：5连抽
 const tear5Btn = document.getElementById("tear5Btn");
 tear5Btn.onclick = ()=>{
   const resultTears = [];
@@ -381,7 +390,7 @@ tear5Btn.onclick = ()=>{
     resultTears.push(t);
     gotTears.add(t.id);
   }
-  addLog("撕拉片抽卡【5连抽】", resultTears.map(x=>x.name).join("、"));
+  addLog("撕拉片抽卡【5连抽】", resultTears.map(x=>`[${x.series}]${x.name}`).join("、"));
 
   tearResult.innerHTML = "";
 
@@ -391,7 +400,7 @@ tear5Btn.onclick = ()=>{
     slot.innerHTML = `
       <div class="tear-img-wrap">
         <div class="tear-back absolute inset-0">
-          <img src="${cardBackUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
+          <img src="${tear.backUrl}" class="w-full h-full object-cover rounded-lg shadow-lg">
         </div>
         <div class="tear-front absolute inset-0 flex flex-col items-center justify-center opacity-0">
           <img src="${tear.img}" class="w-full h-full object-cover rounded-lg shadow-lg">
@@ -421,32 +430,51 @@ tear5Btn.onclick = ()=>{
   });
 }
 
-// 图鉴
+// 图鉴：分组渲染（按系列）
 function renderBook(){
   const cardBookDom = document.getElementById("cardBook");
   cardBookDom.innerHTML = "";
-  cardList.forEach(card=>{
-    const have = gotCards.has(card.id);
-    const src = have ? card.img : cardBackUrl;
-    cardBookDom.innerHTML += `
-      <div class="card-item text-center">
-        <img src="${src}" class="w-full rounded">
-        <p class="text-xs mt-1">${have ? card.name : "???"}</p>
-      </div>
-    `
+  // 普通小卡分组
+  const cardGroup = {};
+  cardList.forEach(c=>{
+    if(!cardGroup[c.series]) cardGroup[c.series] = [];
+    cardGroup[c.series].push(c);
   })
+  for(const sName in cardGroup){
+    cardBookDom.innerHTML += `<div class="series-title">${sName}</div>`;
+    cardGroup[sName].forEach(card=>{
+      const have = gotCards.has(card.id);
+      const src = have ? card.img : card.backUrl;
+      cardBookDom.innerHTML += `
+        <div class="card-item text-center">
+          <img src="${src}" class="w-full rounded">
+          <p class="text-xs mt-1">${have ? card.name : "???"}</p>
+        </div>
+      `
+    })
+  }
+
+  // 撕拉片分组
   const tearBookDom = document.getElementById("tearBook");
   tearBookDom.innerHTML = "";
-  polaroidList.forEach(card=>{
-    const have = gotTears.has(card.id);
-    const src = have ? card.img : cardBackUrl;
-    tearBookDom.innerHTML += `
-      <div class="card-item text-center">
-        <img src="${src}" class="w-full rounded">
-        <p class="text-xs mt-1">${have ? card.name : "???"}</p>
-      </div>
-    `
+  const tearGroup = {};
+  polaroidList.forEach(t=>{
+    if(!tearGroup[t.series]) tearGroup[t.series] = [];
+    tearGroup[t.series].push(t);
   })
+  for(const sName in tearGroup){
+    tearBookDom.innerHTML += `<div class="series-title series-title-tear">${sName}</div>`;
+    tearGroup[sName].forEach(card=>{
+      const have = gotTears.has(card.id);
+      const src = have ? card.img : card.backUrl;
+      tearBookDom.innerHTML += `
+        <div class="card-item text-center">
+          <img src="${src}" class="w-full rounded">
+          <p class="text-xs mt-1">${have ? card.name : "???"}</p>
+        </div>
+      `
+    })
+  }
 }
 
 // 记录
