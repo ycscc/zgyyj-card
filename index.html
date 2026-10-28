@@ -204,6 +204,12 @@
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+.book-card-count{
+  text-align:center;
+  font-size:0.65rem;
+  color:#94a3b8;
+  margin-top:2px;
+}
 
 /* 大图弹窗 */
 .lightbox {
@@ -236,7 +242,19 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4 md:p-6">
 <div class="max-w-4xl mx-auto">
-  <h1 class="text-2xl md:text-3xl font-bold text-center mb-6">小卡抽卡模拟器</h1>
+  <h1 class="text-2xl md:text-3xl font-bold text-center mb-2">小卡抽卡模拟器</h1>
+
+  <!-- ✅ 新增：总抽卡统计栏 -->
+  <div id="totalDrawBox" class="text-center mb-6 bg-slate-800 rounded-lg py-3 px-4">
+    <span class="text-slate-300">普通小卡总抽：</span>
+    <span id="totalCardDraw" class="text-pink-400 font-bold">0</span>
+    <span class="mx-3">｜</span>
+    <span class="text-slate-300">撕拉片总抽：</span>
+    <span id="totalTearDraw" class="text-amber-400 font-bold">0</span>
+    <span class="mx-3">｜</span>
+    <span class="text-slate-300">全部合计：</span>
+    <span id="totalAllDraw" class="text-sky-400 font-bold">0</span>
+  </div>
 
   <!-- 导航标签 -->
   <div class="flex flex-wrap gap-2 mb-6 border-b border-slate-700 pb-2">
@@ -332,14 +350,30 @@ const polaroidList = [
 
 let gotCards = new Set();
 let gotTears = new Set();
+let cardCount = {};   // 普通小卡抽中次数
+let tearCount = {};   // 撕拉片抽中次数
 let logArr = [];
+// ✅ 新增总抽数变量
+let totalCardDraw = 0;
+let totalTearDraw = 0;
+
+// ✅ 更新顶部统计文字函数
+function updateTotalDrawUI(){
+  document.getElementById("totalCardDraw").textContent = totalCardDraw;
+  document.getElementById("totalTearDraw").textContent = totalTearDraw;
+  document.getElementById("totalAllDraw").textContent = totalCardDraw + totalTearDraw;
+}
 
 // ===== localStorage 存档读写 =====
 function saveData(){
   localStorage.setItem("cardSaveData", JSON.stringify({
     gotCards: Array.from(gotCards),
     gotTears: Array.from(gotTears),
-    logArr: logArr
+    cardCount: cardCount,
+    tearCount: tearCount,
+    logArr: logArr,
+    totalCardDraw: totalCardDraw,
+    totalTearDraw: totalTearDraw
   }));
 }
 function loadData(){
@@ -348,13 +382,23 @@ function loadData(){
   const data = JSON.parse(raw);
   gotCards = new Set(data.gotCards || []);
   gotTears = new Set(data.gotTears || []);
+  cardCount = data.cardCount || {};
+  tearCount = data.tearCount || {};
   logArr = data.logArr || [];
+  totalCardDraw = data.totalCardDraw || 0;
+  totalTearDraw = data.totalTearDraw || 0;
+  updateTotalDrawUI();
 }
 function resetAllSave(){
   localStorage.removeItem("cardSaveData");
   gotCards.clear();
   gotTears.clear();
+  cardCount = {};
+  tearCount = {};
   logArr = [];
+  totalCardDraw = 0;
+  totalTearDraw = 0;
+  updateTotalDrawUI();
   renderBook();
   renderLog();
   alert("存档已重置！");
@@ -392,8 +436,11 @@ const drawResult = document.getElementById("drawResult");
 drawBtn.onclick = ()=>{
   const rand = drawOneCard();
   gotCards.add(rand.id);
+  cardCount[rand.id] = (cardCount[rand.id] || 0) + 1;
+  totalCardDraw += 1; // ✅ 统计+1
   addLog("普通抽卡【单抽】", `[${rand.series}] ${rand.name}`);
   saveData();
+  updateTotalDrawUI();
 
   drawResult.innerHTML = `
     <div class="card-slot">
@@ -435,9 +482,12 @@ draw5Btn.onclick = ()=>{
     const c = drawOneCard();
     resultCards.push(c);
     gotCards.add(c.id);
+    cardCount[c.id] = (cardCount[c.id] || 0) + 1;
   }
+  totalCardDraw += 5; // ✅ 5连直接+5
   addLog("普通抽卡【5连抽】", resultCards.map(x=>`[${x.series}]${x.name}`).join("、"));
   saveData();
+  updateTotalDrawUI();
 
   drawResult.innerHTML = "";
 
@@ -484,8 +534,11 @@ const tearResult = document.getElementById("tearResult");
 tearBtn.onclick = ()=>{
   const rand = drawOneTear();
   gotTears.add(rand.id);
+  tearCount[rand.id] = (tearCount[rand.id] || 0) + 1;
+  totalTearDraw += 1; // ✅ 撕拉单抽+1
   addLog("撕拉片抽卡【单抽】", `[${rand.series}] ${rand.name}`);
   saveData();
+  updateTotalDrawUI();
 
   tearResult.innerHTML = `
     <div class="tear-slot">
@@ -526,9 +579,12 @@ tear5Btn.onclick = ()=>{
     const t = drawOneTear();
     resultTears.push(t);
     gotTears.add(t.id);
+    tearCount[t.id] = (tearCount[t.id] || 0) + 1;
   }
+  totalTearDraw += 5; // ✅ 撕拉5连+5
   addLog("撕拉片抽卡【5连抽】", resultTears.map(x=>`[${x.series}]${x.name}`).join("、"));
   saveData();
+  updateTotalDrawUI();
 
   tearResult.innerHTML = "";
 
@@ -568,7 +624,7 @@ tear5Btn.onclick = ()=>{
   });
 }
 
-// 图鉴：分组渲染（按系列 + 进度条 + 遮罩）
+// 图鉴：分组渲染（按系列 + 进度条 + 遮罩 + 抽中次数）
 function renderBook(){
   const cardBookDom = document.getElementById("cardBook");
   cardBookDom.innerHTML = "";
@@ -596,6 +652,7 @@ function renderBook(){
       const maskHtml = have ? "" : `<div class="mask-65"></div>`;
       const clickClass = have ? "got" : "";
       const dataImg = have ? `data-img="${card.img}"` : "";
+      const cnt = cardCount[card.id] || 0;
       cardBookDom.innerHTML += `
         <div>
           <div class="book-card-wrap ${clickClass}" ${dataImg}>
@@ -603,6 +660,7 @@ function renderBook(){
             ${maskHtml}
           </div>
           <p class="book-card-name">${card.name}</p>
+          <p class="book-card-count">已抽中 ${cnt} 次</p>
         </div>
       `
     })
@@ -635,6 +693,7 @@ function renderBook(){
       const maskHtml = have ? "" : `<div class="mask-65"></div>`;
       const clickClass = have ? "got" : "";
       const dataImg = have ? `data-img="${card.img}"` : "";
+      const cnt = tearCount[card.id] || 0;
       tearBookDom.innerHTML += `
         <div>
           <div class="book-card-wrap ${clickClass}" ${dataImg}>
@@ -642,6 +701,7 @@ function renderBook(){
             ${maskHtml}
           </div>
           <p class="book-card-name">${card.name}</p>
+          <p class="book-card-count">已抽中 ${cnt} 次</p>
         </div>
       `
     })
