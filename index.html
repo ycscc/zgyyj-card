@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>中国音乐剧小卡抽卡模拟器</title>
+<title>中国音乐剧小卡抽卡机</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-/* 卡背淡出动画 */
+/* 卡背淡出 */
 @keyframes backFadeOut {
   from { opacity: 1; }
   to { opacity: 0; }
@@ -24,7 +24,7 @@
   60% {
     opacity: 1;
     transform: scale(1.05);
-  }	
+  }
   100% {
     opacity: 1;
     transform: scale(1);
@@ -70,7 +70,7 @@
 .tab-content.active { display: block; }
 .card-item { transition: all 0.3s; }
 
-/* 抽卡结果区 */
+/* 固定结果区尺寸，避免遮挡按钮 */
 .draw-result-box {
   min-height: 380px;
   display: flex;
@@ -91,7 +91,7 @@
   padding: 8px 0;
 }
 
-/* 抽卡单张卡片容器 */
+/* 卡片容器：图片在上，名字在下方独立区域 */
 .card-slot {
   width: 160px;
   display: flex;
@@ -129,68 +129,108 @@
   opacity: 0;
 }
 
-/* 图鉴分组样式 */
-.series-group{
-  margin-bottom:24px;
-  width:100%;
+.series-group {
+  margin-bottom: 20px;
 }
 .series-title{
+  width:100%;
   color:#f472b6;
   font-weight:bold;
-  margin:0 0 6px;
-  font-size:1rem;
+  margin:12px 0 4px;
 }
 .series-title-tear{
   color:#fbbf24;
 }
-/* 进度条容器 */
 .progress-wrap{
   width:100%;
   height:10px;
   background-color:#334155;
   border-radius:999px;
   overflow:hidden;
-  margin-bottom:10px;
+  margin-bottom:8px;
 }
 .progress-bar{
   height:100%;
   background-color:#f472b6;
   transition: width 0.3s ease;
 }
+.progress-bar-tear{
+  background-color:#fbbf24;
+}
 .progress-text{
   font-size:12px;
   color:#cbd5e1;
-  margin-bottom:8px;
+  margin-bottom:6px;
 }
-.series-card-grid{
-  display:grid;
-  grid-template-columns: repeat(5, minmax(0,1fr));
-  gap:12px;
-  width:100%;
-}
-/* 小于768px手机：一行3张 */
-@media (max-width:768px){
-  .series-card-grid{
-    grid-template-columns: repeat(3, minmax(0,1fr));
-  }
-}
-/* 图鉴卡片容器 + 65%黑色遮罩 */
+
+/* 图鉴卡片容器 + 遮罩 */
 .book-card-wrap{
   position:relative;
   width:100%;
+  aspect-ratio: 2 / 3;
+  overflow:hidden;
+  border-radius:0.5rem;
+  min-width:0;
 }
 .book-card-wrap img{
   width:100%;
-  aspect-ratio: 2 / 3;
+  height:100%;
   object-fit: cover;
-  border-radius:0.5rem;
   display:block;
+  min-width:0;
+  min-height:0;
+  max-width:100%;
+  max-height:100%;
 }
 .mask-65{
   position:absolute;
   inset:0;
   background-color:rgba(0,0,0,0.65);
   border-radius:0.5rem;
+  z-index:1;
+}
+.book-card-wrap.got{
+  cursor:pointer;
+}
+.book-card-wrap.got:hover img{
+  filter: brightness(1.1);
+}
+.book-card-name{
+  text-align:center;
+  font-size:0.75rem;
+  margin-top:4px;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* 大图弹窗 */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.lightbox.active {
+  display: flex;
+}
+.lightbox-img {
+  max-width: 90%;
+  max-height: 90vh;
+  border-radius: 0.5rem;
+}
+.lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -237,18 +277,18 @@
     </div>
   </div>
 
-  <!-- 板块3：图鉴 -->
+  <!-- 板块3：图鉴（分系列展示） -->
   <div id="book" class="tab-content">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">图鉴</h2>
-      <p class="text-slate-400 mb-4">已抽到正常显示，未抽到为正面卡面叠加65%黑色遮罩</p>
+      <p class="text-slate-400 mb-4">已抽到卡片可点击放大；未抽到卡面不可点击</p>
       <div class="mb-6">
-        <h3 class="text-lg text-pink-400 mb-3">普通小卡</h3>
-        <div id="cardBook"></div>
+        <h3 class="text-lg text-pink-400">普通小卡</h3>
+        <div id="cardBook" class="grid grid-cols-3 md:grid-cols-5 gap-4 mt-2"></div>
       </div>
       <div>
-        <h3 class="text-lg text-amber-400 mb-3">撕拉片</h3>
-        <div id="tearBook"></div>
+        <h3 class="text-lg text-amber-400">撕拉片</h3>
+        <div id="tearBook" class="grid grid-cols-3 md:grid-cols-5 gap-4 mt-2"></div>
       </div>
     </div>
   </div>
@@ -265,8 +305,14 @@
   </div>
 </div>
 
+<!-- 大图弹窗 -->
+<div class="lightbox" id="lightbox">
+  <span class="lightbox-close" id="lightboxClose">×</span>
+  <img class="lightbox-img" id="lightboxImg" src="" alt="">
+</div>
+
 <script>
-// ========== 卡牌配置区 ==========
+// ========== 配置区：新增 series、backUrl，每个系列独立卡背 ==========
 const cardList = [
   {id:"c1", name:"小卡A", series:"星梦系列", backUrl:"https://picsum.photos/id/20/200/300", img:"https://picsum.photos/id/101/200/300"},
   {id:"c2", name:"小卡B", series:"星梦系列", backUrl:"https://picsum.photos/id/20/200/300", img:"https://picsum.photos/id/102/200/300"},
@@ -274,21 +320,30 @@ const cardList = [
   {id:"c4", name:"小卡D", series:"回响系列", backUrl:"https://picsum.photos/id/21/200/300", img:"https://picsum.photos/id/104/200/300"},
 ];
 const polaroidList = [
-  {id:"p1", name:"撕拉A", series:"晨光系列", backUrl:"https://picsum.photos/id/30/200/300", img:"https://picsum.photos/id/111/200/300"},
-  {id:"p2", name:"撕拉B", series:"晨光系列", backUrl:"https://picsum.photos/id/30/200/300", img:"https://picsum.photos/id/112/200/300"},
-  {id:"p3", name:"撕拉C", series:"暮色系列", backUrl:"https://picsum.photos/id/31/200/300", img:"https://picsum.photos/id/113/200/300"},
+  {id:"p1", name:"徐杭", series:"Badkids", backUrl:"https://i.ibb.co/TqWp1xn5/card-back.jpg", img:"https://i.ibb.co/qYFdSN5p/You3.jpg"},
+  {id:"p2", name:"邱俊阳", series:"Badkids", backUrl:"https://i.ibb.co/TqWp1xn5/card-back.jpg", img:"https://i.ibb.co/sp7m8ZHb/You2.jpg"},
+  {id:"p3", name:"毛二", series:"Badkids", backUrl:"https://i.ibb.co/TqWp1xn5/card-back.jpg", img:"https://i.ibb.co/TMR8pXsc/You1.jpg"},
+  {id:"p4", name:"郑艺彬", series:"Badkids", backUrl:"https://i.ibb.co/TqWp1xn5/card-back.jpg", img:"https://i.ibb.co/5ggxhSbv/Wang2.jpg"},
+  {id:"p5", name:"王敏辉", series:"Badkids", backUrl:"https://i.ibb.co/TqWp1xn5/card-back.jpg", img:"https://i.ibb.co/TGwLzCY/Wang1.jpg"},
+  {id:"p6", name:"陈蕴", series:"Badkids", backUrl:"https://i.ibb.co/TqWp1xn5/card-back.jpg", img:"https://i.ibb.co/pvSY0wWq/Other2.jpg"},
+  {id:"p7", name:"叶宇锋", series:"Badkids", backUrl:"https://i.ibb.co/TqWp1xn5/card-back.jpg", img:"https://i.ibb.co/Dgpy21PB/Other1.jpg"},
+
 ];
 
-// 存档读写函数
+let gotCards = new Set();
+let gotTears = new Set();
+let logArr = [];
+
+// ===== localStorage 存档读写 =====
 function saveData(){
-  localStorage.setItem("cardSave", JSON.stringify({
+  localStorage.setItem("cardSaveData", JSON.stringify({
     gotCards: Array.from(gotCards),
     gotTears: Array.from(gotTears),
     logArr: logArr
   }));
 }
 function loadData(){
-  const raw = localStorage.getItem("cardSave");
+  const raw = localStorage.getItem("cardSaveData");
   if(!raw) return;
   const data = JSON.parse(raw);
   gotCards = new Set(data.gotCards || []);
@@ -296,19 +351,15 @@ function loadData(){
   logArr = data.logArr || [];
 }
 function resetAllSave(){
-  localStorage.removeItem("cardSave");
+  localStorage.removeItem("cardSaveData");
   gotCards.clear();
   gotTears.clear();
   logArr = [];
   renderBook();
   renderLog();
-  alert("存档已全部重置！");
+  alert("存档已重置！");
 }
-
-let gotCards = new Set();
-let gotTears = new Set();
-let logArr = [];
-loadData(); // 页面加载读取存档
+loadData();
 
 // 标签切换
 const tabBtns = document.querySelectorAll(".tab-btn");
@@ -326,7 +377,7 @@ tabBtns.forEach(btn=>{
 })
 document.getElementById("resetSaveBtn").onclick = resetAllSave;
 
-// 抽卡工具
+// 工具函数
 function drawOneCard(){
   return cardList[Math.floor(Math.random()*cardList.length)];
 }
@@ -334,7 +385,7 @@ function drawOneTear(){
   return polaroidList[Math.floor(Math.random()*polaroidList.length)];
 }
 
-// 普通小卡 单抽
+// 普通抽卡：单抽
 const drawBtn = document.getElementById("drawBtn");
 const drawResult = document.getElementById("drawResult");
 
@@ -363,18 +414,21 @@ drawBtn.onclick = ()=>{
   const name = drawResult.querySelector(".card-name");
 
   setTimeout(() => back.classList.add("back-fade-out"), 100);
+
   setTimeout(() => {
     back.style.display = "none";
     front.classList.remove("opacity-0", "pointer-events-none");
     front.classList.add("card-pop");
   }, 600);
+
   setTimeout(() => {
     name.classList.add("name-fade");
   }, 1050);
 }
 
-// 普通小卡 5连抽
+// 普通抽卡：5连抽
 const draw5Btn = document.getElementById("draw5Btn");
+
 draw5Btn.onclick = ()=>{
   const resultCards = [];
   for(let i = 0; i < 5; i++){
@@ -384,7 +438,9 @@ draw5Btn.onclick = ()=>{
   }
   addLog("普通抽卡【5连抽】", resultCards.map(x=>`[${x.series}]${x.name}`).join("、"));
   saveData();
+
   drawResult.innerHTML = "";
+
   resultCards.forEach((card, idx) => {
     const slot = document.createElement("div");
     slot.className = "card-slot";
@@ -400,30 +456,37 @@ draw5Btn.onclick = ()=>{
       <p class="card-name">${card.name}</p>
     `;
     drawResult.appendChild(slot);
+
     const back = slot.querySelector(".card-back");
     const front = slot.querySelector(".card-front");
     const name = slot.querySelector(".card-name");
+
     const delay = idx * 180;
+
     setTimeout(() => back.classList.add("back-fade-out"), 100 + delay);
+
     setTimeout(() => {
       back.style.display = "none";
       front.classList.remove("opacity-0", "pointer-events-none");
       front.classList.add("card-pop");
     }, 600 + delay);
+
     setTimeout(() => {
       name.classList.add("name-fade");
     }, 1050 + delay);
   });
 }
 
-// 撕拉片 单抽
+// 撕拉片：单抽
 const tearBtn = document.getElementById("tearBtn");
 const tearResult = document.getElementById("tearResult");
+
 tearBtn.onclick = ()=>{
   const rand = drawOneTear();
   gotTears.add(rand.id);
   addLog("撕拉片抽卡【单抽】", `[${rand.series}] ${rand.name}`);
   saveData();
+
   tearResult.innerHTML = `
     <div class="tear-slot">
       <div class="tear-img-wrap">
@@ -437,21 +500,25 @@ tearBtn.onclick = ()=>{
       <p class="tear-name">${rand.name}</p>
     </div>
   `;
+
   const back = tearResult.querySelector(".tear-back");
   const front = tearResult.querySelector(".tear-front");
   const name = tearResult.querySelector(".tear-name");
+
   setTimeout(() => back.classList.add("tear-back-fade"), 100);
+
   setTimeout(() => {
     back.style.display = "none";
     front.classList.remove("opacity-0");
     front.classList.add("tear-front-in");
   }, 800);
+
   setTimeout(() => {
     name.classList.add("name-fade");
   }, 1200);
 }
 
-// 撕拉片 5连抽
+// 撕拉片：5连抽
 const tear5Btn = document.getElementById("tear5Btn");
 tear5Btn.onclick = ()=>{
   const resultTears = [];
@@ -462,7 +529,9 @@ tear5Btn.onclick = ()=>{
   }
   addLog("撕拉片抽卡【5连抽】", resultTears.map(x=>`[${x.series}]${x.name}`).join("、"));
   saveData();
+
   tearResult.innerHTML = "";
+
   resultTears.forEach((tear, idx) => {
     const slot = document.createElement("div");
     slot.className = "tear-slot";
@@ -478,26 +547,32 @@ tear5Btn.onclick = ()=>{
       <p class="tear-name">${tear.name}</p>
     `;
     tearResult.appendChild(slot);
+
     const back = slot.querySelector(".tear-back");
     const front = slot.querySelector(".tear-front");
     const name = slot.querySelector(".tear-name");
+
     const delay = idx * 180;
+
     setTimeout(() => back.classList.add("tear-back-fade"), 100 + delay);
+
     setTimeout(() => {
       back.style.display = "none";
       front.classList.remove("opacity-0");
       front.classList.add("tear-front-in");
     }, 800 + delay);
+
     setTimeout(() => {
       name.classList.add("name-fade");
     }, 1200 + delay);
   });
 }
 
-// 图鉴渲染
+// 图鉴：分组渲染（按系列 + 进度条 + 遮罩）
 function renderBook(){
   const cardBookDom = document.getElementById("cardBook");
   cardBookDom.innerHTML = "";
+  // 普通小卡分组
   const cardGroup = {};
   cardList.forEach(c=>{
     if(!cardGroup[c.series]) cardGroup[c.series] = [];
@@ -510,26 +585,31 @@ function renderBook(){
     const percent = (collected / total) * 100;
     cardBookDom.innerHTML += `
       <div class="series-group">
-        <h4 class="series-title">${sName}</h4>
+        <div class="series-title">${sName}</div>
         <div class="progress-text">收集：${collected}/${total}</div>
         <div class="progress-wrap">
           <div class="progress-bar" style="width:${percent}%"></div>
         </div>
-        <div class="series-card-grid">`;
+        <div class="grid grid-cols-3 md:grid-cols-5 gap-4">`;
     list.forEach(card=>{
       const have = gotCards.has(card.id);
-      const htmlMask = have ? "" : `<div class="mask-65"></div>`;
+      const maskHtml = have ? "" : `<div class="mask-65"></div>`;
+      const clickClass = have ? "got" : "";
+      const dataImg = have ? `data-img="${card.img}"` : "";
       cardBookDom.innerHTML += `
-        <div class="book-card-wrap text-center">
-          <img src="${card.img}">
-          ${htmlMask}
-          <p class="text-xs mt-1">${card.name}</p>
+        <div>
+          <div class="book-card-wrap ${clickClass}" ${dataImg}>
+            <img src="${card.img}">
+            ${maskHtml}
+          </div>
+          <p class="book-card-name">${card.name}</p>
         </div>
       `
     })
     cardBookDom.innerHTML += `</div></div>`;
   }
 
+  // 撕拉片分组
   const tearBookDom = document.getElementById("tearBook");
   tearBookDom.innerHTML = "";
   const tearGroup = {};
@@ -544,25 +624,52 @@ function renderBook(){
     const percent = (collected / total) * 100;
     tearBookDom.innerHTML += `
       <div class="series-group">
-        <h4 class="series-title series-title-tear">${sName}</h4>
+        <div class="series-title series-title-tear">${sName}</div>
         <div class="progress-text">收集：${collected}/${total}</div>
         <div class="progress-wrap">
-          <div class="progress-bar" style="width:${percent}%; background-color:#fbbf24;"></div>
+          <div class="progress-bar progress-bar-tear" style="width:${percent}%"></div>
         </div>
-        <div class="series-card-grid">`;
+        <div class="grid grid-cols-3 md:grid-cols-5 gap-4">`;
     list.forEach(card=>{
       const have = gotTears.has(card.id);
-      const htmlMask = have ? "" : `<div class="mask-65"></div>`;
+      const maskHtml = have ? "" : `<div class="mask-65"></div>`;
+      const clickClass = have ? "got" : "";
+      const dataImg = have ? `data-img="${card.img}"` : "";
       tearBookDom.innerHTML += `
-        <div class="book-card-wrap text-center">
-          <img src="${card.img}">
-          ${htmlMask}
-          <p class="text-xs mt-1">${card.name}</p>
+        <div>
+          <div class="book-card-wrap ${clickClass}" ${dataImg}>
+            <img src="${card.img}">
+            ${maskHtml}
+          </div>
+          <p class="book-card-name">${card.name}</p>
         </div>
       `
     })
     tearBookDom.innerHTML += `</div></div>`;
   }
+
+  // 绑定大图点击
+  document.querySelectorAll(".book-card-wrap.got").forEach(el=>{
+    el.onclick = ()=>{
+      openLightbox(el.dataset.img);
+    }
+  })
+}
+
+// 弹窗逻辑
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightboxImg");
+const lightboxClose = document.getElementById("lightboxClose");
+function openLightbox(url){
+  lightboxImg.src = url;
+  lightbox.classList.add("active");
+}
+function closeLightbox(){
+  lightbox.classList.remove("active");
+}
+lightboxClose.onclick = closeLightbox;
+lightbox.onclick = (e)=>{
+  if(e.target === lightbox) closeLightbox();
 }
 
 // 记录
