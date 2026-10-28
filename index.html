@@ -6,7 +6,7 @@
 <title>中国音乐剧小卡抽卡机</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-/* 卡背淡出 */
+/* 卡背淡出动画 */
 @keyframes backFadeOut {
   from { opacity: 1; }
   to { opacity: 0; }
@@ -70,7 +70,7 @@
 .tab-content.active { display: block; }
 .card-item { transition: all 0.3s; }
 
-/* 固定结果区尺寸，避免遮挡按钮 */
+/* 抽卡结果区 */
 .draw-result-box {
   min-height: 380px;
   display: flex;
@@ -91,7 +91,7 @@
   padding: 8px 0;
 }
 
-/* 卡片容器：图片在上，名字在下方独立区域 */
+/* 抽卡单张卡片容器 */
 .card-slot {
   width: 160px;
   display: flex;
@@ -129,14 +129,38 @@
   opacity: 0;
 }
 
+/* 图鉴分组样式 */
+.series-group{
+  margin-bottom:20px;
+}
 .series-title{
-  width:100%;
   color:#f472b6;
   font-weight:bold;
-  margin:12px 0 4px;
+  margin:0 0 8px;
+  font-size:1rem;
 }
 .series-title-tear{
   color:#fbbf24;
+}
+.series-card-grid{
+  display:grid;
+  grid-template-columns: repeat(5, minmax(0,1fr));
+  gap:12px;
+}
+@media (max-width:768px){
+  .series-card-grid{
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }
+}
+/* 图鉴卡片容器 + 半黑遮罩 */
+.book-card-wrap{
+  position:relative;
+}
+.mask-50{
+  position:absolute;
+  inset:0;
+  background-color:rgba(0,0,0,0.5);
+  border-radius:0.5rem;
 }
 </style>
 </head>
@@ -182,18 +206,18 @@
     </div>
   </div>
 
-  <!-- 板块3：图鉴（分系列展示） -->
+  <!-- 板块3：图鉴 -->
   <div id="book" class="tab-content">
     <div class="bg-slate-800 rounded-xl p-6">
       <h2 class="text-xl font-semibold mb-4">图鉴</h2>
-      <p class="text-slate-400 mb-4">已抽到显示正面，未抽到显示该系列卡背</p>
-      <div class="mb-4">
-        <h3 class="text-lg text-pink-400">普通小卡</h3>
-        <div id="cardBook" class="grid grid-cols-3 md:grid-cols-5 gap-4 mt-2"></div>
+      <p class="text-slate-400 mb-4">已抽到正常显示，未抽到为正面卡面叠加50%黑色遮罩</p>
+      <div class="mb-6">
+        <h3 class="text-lg text-pink-400 mb-3">普通小卡</h3>
+        <div id="cardBook"></div>
       </div>
-      <div class="mt-6">
-        <h3 class="text-lg text-amber-400">撕拉片</h3>
-        <div id="tearBook" class="grid grid-cols-3 md:grid-cols-5 gap-4 mt-2"></div>
+      <div>
+        <h3 class="text-lg text-amber-400 mb-3">撕拉片</h3>
+        <div id="tearBook"></div>
       </div>
     </div>
   </div>
@@ -211,7 +235,7 @@
 </div>
 
 <script>
-// ========== 配置区：新增 series、backUrl，每个系列独立卡背 ==========
+// ========== 卡牌配置区 ==========
 const cardList = [
   {id:"c1", name:"小卡A", series:"星梦系列", backUrl:"https://picsum.photos/id/20/200/300", img:"https://picsum.photos/id/101/200/300"},
   {id:"c2", name:"小卡B", series:"星梦系列", backUrl:"https://picsum.photos/id/20/200/300", img:"https://picsum.photos/id/102/200/300"},
@@ -243,7 +267,7 @@ tabBtns.forEach(btn=>{
   }
 })
 
-// 工具函数
+// 抽卡工具
 function drawOneCard(){
   return cardList[Math.floor(Math.random()*cardList.length)];
 }
@@ -251,7 +275,7 @@ function drawOneTear(){
   return polaroidList[Math.floor(Math.random()*polaroidList.length)];
 }
 
-// 普通抽卡：单抽
+// 普通小卡 单抽
 const drawBtn = document.getElementById("drawBtn");
 const drawResult = document.getElementById("drawResult");
 
@@ -279,21 +303,18 @@ drawBtn.onclick = ()=>{
   const name = drawResult.querySelector(".card-name");
 
   setTimeout(() => back.classList.add("back-fade-out"), 100);
-
   setTimeout(() => {
     back.style.display = "none";
     front.classList.remove("opacity-0", "pointer-events-none");
     front.classList.add("card-pop");
   }, 600);
-
   setTimeout(() => {
     name.classList.add("name-fade");
   }, 1050);
 }
 
-// 普通抽卡：5连抽
+// 普通小卡 5连抽
 const draw5Btn = document.getElementById("draw5Btn");
-
 draw5Btn.onclick = ()=>{
   const resultCards = [];
   for(let i = 0; i < 5; i++){
@@ -302,9 +323,7 @@ draw5Btn.onclick = ()=>{
     gotCards.add(c.id);
   }
   addLog("普通抽卡【5连抽】", resultCards.map(x=>`[${x.series}]${x.name}`).join("、"));
-
   drawResult.innerHTML = "";
-
   resultCards.forEach((card, idx) => {
     const slot = document.createElement("div");
     slot.className = "card-slot";
@@ -320,36 +339,29 @@ draw5Btn.onclick = ()=>{
       <p class="card-name">${card.name}</p>
     `;
     drawResult.appendChild(slot);
-
     const back = slot.querySelector(".card-back");
     const front = slot.querySelector(".card-front");
     const name = slot.querySelector(".card-name");
-
     const delay = idx * 180;
-
     setTimeout(() => back.classList.add("back-fade-out"), 100 + delay);
-
     setTimeout(() => {
       back.style.display = "none";
       front.classList.remove("opacity-0", "pointer-events-none");
       front.classList.add("card-pop");
     }, 600 + delay);
-
     setTimeout(() => {
       name.classList.add("name-fade");
     }, 1050 + delay);
   });
 }
 
-// 撕拉片：单抽
+// 撕拉片 单抽
 const tearBtn = document.getElementById("tearBtn");
 const tearResult = document.getElementById("tearResult");
-
 tearBtn.onclick = ()=>{
   const rand = drawOneTear();
   gotTears.add(rand.id);
   addLog("撕拉片抽卡【单抽】", `[${rand.series}] ${rand.name}`);
-
   tearResult.innerHTML = `
     <div class="tear-slot">
       <div class="tear-img-wrap">
@@ -363,25 +375,21 @@ tearBtn.onclick = ()=>{
       <p class="tear-name">${rand.name}</p>
     </div>
   `;
-
   const back = tearResult.querySelector(".tear-back");
   const front = tearResult.querySelector(".tear-front");
   const name = tearResult.querySelector(".tear-name");
-
   setTimeout(() => back.classList.add("tear-back-fade"), 100);
-
   setTimeout(() => {
     back.style.display = "none";
     front.classList.remove("opacity-0");
     front.classList.add("tear-front-in");
   }, 800);
-
   setTimeout(() => {
     name.classList.add("name-fade");
   }, 1200);
 }
 
-// 撕拉片：5连抽
+// 撕拉片 5连抽
 const tear5Btn = document.getElementById("tear5Btn");
 tear5Btn.onclick = ()=>{
   const resultTears = [];
@@ -391,9 +399,7 @@ tear5Btn.onclick = ()=>{
     gotTears.add(t.id);
   }
   addLog("撕拉片抽卡【5连抽】", resultTears.map(x=>`[${x.series}]${x.name}`).join("、"));
-
   tearResult.innerHTML = "";
-
   resultTears.forEach((tear, idx) => {
     const slot = document.createElement("div");
     slot.className = "tear-slot";
@@ -409,52 +415,50 @@ tear5Btn.onclick = ()=>{
       <p class="tear-name">${tear.name}</p>
     `;
     tearResult.appendChild(slot);
-
     const back = slot.querySelector(".tear-back");
     const front = slot.querySelector(".tear-front");
     const name = slot.querySelector(".tear-name");
-
     const delay = idx * 180;
-
     setTimeout(() => back.classList.add("tear-back-fade"), 100 + delay);
-
     setTimeout(() => {
       back.style.display = "none";
       front.classList.remove("opacity-0");
       front.classList.add("tear-front-in");
     }, 800 + delay);
-
     setTimeout(() => {
       name.classList.add("name-fade");
     }, 1200 + delay);
   });
 }
 
-// 图鉴：分组渲染（按系列）
+// 图鉴渲染【重点修改这里】
 function renderBook(){
   const cardBookDom = document.getElementById("cardBook");
   cardBookDom.innerHTML = "";
-  // 普通小卡分组
   const cardGroup = {};
   cardList.forEach(c=>{
     if(!cardGroup[c.series]) cardGroup[c.series] = [];
     cardGroup[c.series].push(c);
   })
   for(const sName in cardGroup){
-    cardBookDom.innerHTML += `<div class="series-title">${sName}</div>`;
+    cardBookDom.innerHTML += `<div class="series-group">
+      <h4 class="series-title">${sName}</h4>
+      <div class="series-card-grid">`;
     cardGroup[sName].forEach(card=>{
       const have = gotCards.has(card.id);
-      const src = have ? card.img : card.backUrl;
+      // 无论抽没抽到，都用正面图
+      const htmlMask = have ? "" : `<div class="mask-50"></div>`;
       cardBookDom.innerHTML += `
-        <div class="card-item text-center">
-          <img src="${src}" class="w-full rounded">
-          <p class="text-xs mt-1">${have ? card.name : "???"}</p>
+        <div class="book-card-wrap text-center">
+          <img src="${card.img}" class="w-full rounded">
+          ${htmlMask}
+          <p class="text-xs mt-1">${card.name}</p>
         </div>
       `
     })
+    cardBookDom.innerHTML += `</div></div>`;
   }
 
-  // 撕拉片分组
   const tearBookDom = document.getElementById("tearBook");
   tearBookDom.innerHTML = "";
   const tearGroup = {};
@@ -463,17 +467,21 @@ function renderBook(){
     tearGroup[t.series].push(t);
   })
   for(const sName in tearGroup){
-    tearBookDom.innerHTML += `<div class="series-title series-title-tear">${sName}</div>`;
+    tearBookDom.innerHTML += `<div class="series-group">
+      <h4 class="series-title series-title-tear">${sName}</h4>
+      <div class="series-card-grid">`;
     tearGroup[sName].forEach(card=>{
       const have = gotTears.has(card.id);
-      const src = have ? card.img : card.backUrl;
+      const htmlMask = have ? "" : `<div class="mask-50"></div>`;
       tearBookDom.innerHTML += `
-        <div class="card-item text-center">
-          <img src="${src}" class="w-full rounded">
-          <p class="text-xs mt-1">${have ? card.name : "???"}</p>
+        <div class="book-card-wrap text-center">
+          <img src="${card.img}" class="w-full rounded">
+          ${htmlMask}
+          <p class="text-xs mt-1">${card.name}</p>
         </div>
       `
     })
+    tearBookDom.innerHTML += `</div></div>`;
   }
 }
 
