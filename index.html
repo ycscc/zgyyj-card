@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>中国音乐剧小卡抽卡机</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* 淡入动画 */
+@keyframes fadeIn {
+  from { opacity:0; transform: scale(0.9); }
+  to { opacity:1; transform: scale(1); }
+}
+.fade-in {
+  animation: fadeIn 0.6s ease forwards;
+}
+.fade-in-delay-1 { animation-delay: 0.15s; }
+.fade-in-delay-2 { animation-delay: 0.3s; }
+.fade-in-delay-3 { animation-delay: 0.45s; }
+.fade-in-delay-4 { animation-delay: 0.6s; }
+
+/* 撕拉动画：左上到右下撕开 */
+.tear-wrap {
+  position: relative;
+  overflow: hidden;
+}
+.tear-back {
+  position: absolute;
+  top:0; left:0;
+  width:100%; height:100%;
+  clip-path: polygon(0 0, 0 0, 0 0, 0 0);
+  transition: clip-path 1s ease-in-out;
+  z-index: 2;
+}
+.tear-back.tear-anim {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+.tear-front {
+  position: relative;
+  z-index:1;
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.card-item { transition: all 0.3s; }
+</style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4 md:p-6">
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl md:text-3xl font-bold text-center mb-6">小卡抽卡系统</h1>
+
+  <!-- 导航标签 -->
+  <div class="flex flex-wrap gap-2 mb-6 border-b border-slate-700 pb-2">
+    <button class="tab-btn px-4 py-2 rounded bg-sky-600" data-tab="draw">抽卡</button>
+    <button class="tab-btn px-4 py-2 rounded bg-slate-700 hover:bg-slate-600" data-tab="tear">抽撕拉片</button>
+    <button class="tab-btn px-4 py-2 rounded bg-slate-700 hover:bg-slate-600" data-tab="book">图鉴</button>
+    <button class="tab-btn px-4 py-2 rounded bg-slate-700 hover:bg-slate-600" data-tab="log">记录</button>
+  </div>
+
+  <!-- 板块1：抽卡（新增5连抽） -->
+  <div id="draw" class="tab-content active">
+    <div class="bg-slate-800 rounded-xl p-6">
+      <h2 class="text-xl font-semibold mb-4">抽卡</h2>
+      <p class="text-slate-400 mb-4">卡池内卡片等概率抽取，抽取后自动记入图鉴</p>
+      <div class="flex gap-3 mb-4">
+        <button id="drawBtn" class="px-6 py-2 bg-pink-500 rounded-lg hover:bg-pink-600">单抽一张</button>
+        <button id="draw5Btn" class="px-6 py-2 bg-rose-600 rounded-lg hover:bg-rose-700">5连抽</button>
+      </div>
+      <div id="drawResult" class="mt-6 flex justify-center flex-wrap gap-3">
+      </div>
+    </div>
+  </div>
+
+  <!-- 板块2：抽撕拉片 -->
+  <div id="tear" class="tab-content">
+    <div class="bg-slate-800 rounded-xl p-6">
+      <h2 class="text-xl font-semibold mb-4">抽撕拉片</h2>
+      <p class="text-slate-400 mb-4">撕拉片池等概率抽取，动画为左上向右下撕开卡背</p>
+      <button id="tearBtn" class="px-6 py-2 bg-amber-500 rounded-lg hover:bg-amber-600">抽取一张撕拉片</button>
+      <div id="tearResult" class="mt-6 flex justify-center">
+      </div>
+    </div>
+  </div>
+
+  <!-- 板块3：图鉴 -->
+  <div id="book" class="tab-content">
+    <div class="bg-slate-800 rounded-xl p-6">
+      <h2 class="text-xl font-semibold mb-4">图鉴</h2>
+      <p class="text-slate-400 mb-4">已抽到显示正面，未抽到显示卡背</p>
+      <div class="mb-4">
+        <h3 class="text-lg text-pink-400">普通小卡</h3>
+        <div id="cardBook" class="grid grid-cols-3 md:grid-cols-5 gap-4 mt-2"></div>
+      </div>
+      <div class="mt-6">
+        <h3 class="text-lg text-amber-400">撕拉片</h3>
+        <div id="tearBook" class="grid grid-cols-3 md:grid-cols-5 gap-4 mt-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 板块4：记录 -->
+  <div id="log" class="tab-content">
+    <div class="bg-slate-800 rounded-xl p-6">
+      <h2 class="text-xl font-semibold mb-4">抽取记录</h2>
+      <button id="clearLog" class="px-4 py-1 bg-red-500 rounded text-sm mb-4">清空记录</button>
+      <div id="logList" class="space-y-2 max-h-[600px] overflow-y-auto pr-2 text-sm">
+        <div class="text-slate-400">暂无记录</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 配置区：在这里替换你的图片 ==========
+const cardBackUrl = "https://picsum.photos/id/20/200/300"; // 卡背图
+// 普通小卡卡池
+const cardList = [
+  {id:"c1", name:"小卡A", img:"https://picsum.photos/id/101/200/300"},
+  {id:"c2", name:"小卡B", img:"https://picsum.photos/id/102/200/300"},
+  {id:"c3", name:"小卡C", img:"https://picsum.photos/id/103/200/300"},
+  {id:"c4", name:"小卡D", img:"https://picsum.photos/id/104/200/300"},
+];
+// 撕拉片卡池
+const polaroidList = [
+  {id:"p1", name:"撕拉A", img:"https://picsum.photos/id/111/200/300"},
+  {id:"p2", name:"撕拉B", img:"https://picsum.photos/id/112/200/300"},
+  {id:"p3", name:"撕拉C", img:"https://picsum.photos/id/113/200/300"},
+];
+
+// 数据
+let gotCards = new Set(); // 抽到的普通卡id
+let gotTears = new Set(); // 抽到的撕拉片id
+let logArr = [];
+
+// 标签切换
+const tabBtns = document.querySelectorAll(".tab-btn");
+const tabs = document.querySelectorAll(".tab-content");
+tabBtns.forEach(btn=>{
+  btn.onclick = ()=>{
+    const target = btn.dataset.tab;
+    tabBtns.forEach(b=>b.className="tab-btn px-4 py-2 rounded bg-slate-700 hover:bg-slate-600");
+    btn.className="tab-btn px-4 py-2 rounded bg-sky-600";
+    tabs.forEach(t=>t.classList.remove("active"));
+    document.getElementById(target).classList.add("active");
+    if(target==="book") renderBook();
+    if(target==="log") renderLog();
+  }
+})
+
+// 抽卡：单抽
+const drawBtn = document.getElementById("drawBtn");
+const draw5Btn = document.getElementById("draw5Btn");
+const drawResult = document.getElementById("drawResult");
+
+function drawOneCard(){
+  return cardList[Math.floor(Math.random()*cardList.length)];
+}
+drawBtn.onclick = ()=>{
+  const rand = drawOneCard();
+  gotCards.add(rand.id);
+  addLog("普通抽卡【单抽】", rand.name);
+  drawResult.innerHTML = `
+    <div class="fade-in">
+      <img src="${rand.img}" alt="${rand.name}" class="w-40 rounded-lg shadow-lg">
+      <p class="text-center mt-2">${rand.name}</p>
+    </div>
+  `
+}
+
+// 5连抽
+draw5Btn.onclick = ()=>{
+  drawResult.innerHTML = "";
+  const resultCards = [];
+  for(let i=0;i<5;i++){
+    const c = drawOneCard();
+    resultCards.push(c);
+    gotCards.add(c.id);
+  }
+  // 生成html，依次延迟淡入
+  let html = "";
+  resultCards.forEach((card, idx)=>{
+    const delayClass = ["","fade-in-delay-1","fade-in-delay-2","fade-in-delay-3","fade-in-delay-4"][idx];
+    html += `
+    <div class="fade-in ${delayClass}">
+      <img src="${card.img}" alt="${card.name}" class="w-40 rounded-lg shadow-lg">
+      <p class="text-center mt-2">${card.name}</p>
+    </div>
+    `
+  })
+  drawResult.innerHTML = html;
+  addLog("普通抽卡【5连抽】", resultCards.map(x=>x.name).join("、"));
+}
+
+// 抽撕拉片（左上→右下撕开动画）
+const tearBtn = document.getElementById("tearBtn");
+const tearResult = document.getElementById("tearResult");
+tearBtn.onclick = ()=>{
+  const rand = polaroidList[Math.floor(Math.random()*polaroidList.length)];
+  gotTears.add(rand.id);
+  addLog("撕拉片抽卡", rand.name);
+  tearResult.innerHTML = `
+    <div class="tear-wrap w-48 rounded-lg shadow-lg overflow-hidden">
+      <div class="tear-front">
+        <img src="${rand.img}" alt="${rand.name}" class="w-full block">
+      </div>
+      <div class="tear-back">
+        <img src="${cardBackUrl}" alt="卡背" class="w-full block">
+      </div>
+      <p class="text-center mt-2">${rand.name}</p>
+    </div>
+  `
+  setTimeout(()=>{
+    tearResult.querySelector(".tear-back").classList.add("tear-anim");
+  },100)
+}
+
+// 图鉴渲染
+function renderBook(){
+  const cardBookDom = document.getElementById("cardBook");
+  cardBookDom.innerHTML = "";
+  cardList.forEach(card=>{
+    const have = gotCards.has(card.id);
+    const src = have ? card.img : cardBackUrl;
+    cardBookDom.innerHTML += `
+      <div class="card-item text-center">
+        <img src="${src}" class="w-full rounded">
+        <p class="text-xs mt-1">${have ? card.name : "???"}</p>
+      </div>
+    `
+  })
+  const tearBookDom = document.getElementById("tearBook");
+  tearBookDom.innerHTML = "";
+  polaroidList.forEach(card=>{
+    const have = gotTears.has(card.id);
+    const src = have ? card.img : cardBackUrl;
+    tearBookDom.innerHTML += `
+      <div class="card-item text-center">
+        <img src="${src}" class="w-full rounded">
+        <p class="text-xs mt-1">${have ? card.name : "???"}</p>
+      </div>
+    `
+  })
+}
+
+// 记录
+function addLog(type, name){
+  const time = new Date().toLocaleString();
+  logArr.unshift({time, type, name});
+  renderLog();
+}
+function renderLog(){
+  const logDom = document.getElementById("logList");
+  if(logArr.length ===0){
+    logDom.innerHTML = `<div class="text-slate-400">暂无记录</div>`
+    return;
+  }
+  logDom.innerHTML = logArr.map(item=>`
+    <div class="bg-slate-700 p-2 rounded">
+      <span class="text-slate-400">${item.time}</span>
+      <span class="mx-2">｜</span>
+      <span>${item.type}</span>
+      <span class="mx-2">→</span>
+      <span class="text-pink-300">${item.name}</span>
+    </div>
+  `).join("");
+}
+document.getElementById("clearLog").onclick = ()=>{
+  logArr = [];
+  renderLog();
+}
+</script>
+</body>
+</html>
